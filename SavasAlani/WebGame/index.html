@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Savaş Alanı - Tower Defense</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="orientation-warning">
+        <div class="warning-content">
+            <span>🔄</span>
+            <p>Lütfen Cihazı Yan Çevirin</p>
+        </div>
+    </div>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <canvas id="menu-bg-canvas"></canvas>
+
+        <div id="ui-layer" class="hidden">
+            <div id="top-bar">
+                <div class="stat-box">
+                    <span class="icon">❤️</span>
+                    <span id="lives">20</span>
+                </div>
+                <div class="stat-box">
+                    <span class="icon">💰</span>
+                    <span id="money">200</span>
+                </div>
+                <div class="stat-box">
+                    <span class="icon">🌊</span>
+                    <span id="wave">Wave 1</span>
+                </div>
+                <div class="stat-box clickable" id="restart-btn" onclick="game.restartLevel()">
+                    <span class="icon">🔄</span>
+                    <span>TEKRAR</span>
+                </div>
+            </div>
+
+            <div id="build-menu">
+                <div class="tower-card" onmousedown="game.startDrag('standard')">
+                    <canvas class="tower-preview-canvas" data-type="standard" width="36" height="36"></canvas>
+                    <span class="tower-cost">$50</span>
+                    <span class="tower-name">Turret</span>
+                </div>
+                <div class="tower-card" onmousedown="game.startDrag('sniper')">
+                    <canvas class="tower-preview-canvas" data-type="sniper" width="36" height="36"></canvas>
+                    <span class="tower-cost">$100</span>
+                    <span class="tower-name">Sniper</span>
+                </div>
+                <div class="tower-card" onmousedown="game.startDrag('rapid')">
+                    <canvas class="tower-preview-canvas" data-type="rapid" width="36" height="36"></canvas>
+                    <span class="tower-cost">$150</span>
+                    <span class="tower-name">Shredder</span>
+                </div>
+                <div class="tower-card" onmousedown="game.startDrag('tesla')">
+                    <canvas class="tower-preview-canvas" data-type="tesla" width="36" height="36"></canvas>
+                    <span class="tower-cost">$200</span>
+                    <span class="tower-name">Tesla</span>
+                </div>
+                <div class="tower-card" onmousedown="game.startDrag('plasma')">
+                    <canvas class="tower-preview-canvas" data-type="plasma" width="36" height="36"></canvas>
+                    <span class="tower-cost">$300</span>
+                    <span class="tower-name">Plasma</span>
+                </div>
+            </div>
+
+            <!-- Old upgrade menu removed -->
+
+            <button id="speed-btn" class="hud-btn" onclick="game.toggleSpeed()">1x</button>
+            <button id="pause-btn" class="hud-btn" onclick="game.togglePause()">⏸️</button>
+        </div>
+
+        <!-- Independent Menu Screens -->
+        <div id="main-menu">
+            <div class="menu-content">
+                <div class="menu-tag">v2.5 MOBILE EDITION</div>
+                <h1 class="glitch-text">SAVAŞ ALANI</h1>
+                <p class="subtitle">NEON INSECT DEFENSE</p>
+                <div class="menu-actions">
+                    <button class="main-btn pulse" onclick="game.showLevelSelect()"
+                        ontouchstart="event.preventDefault(); game.showLevelSelect()">
+                        <span class="btn-icon">▶</span> OYNA
+                    </button>
+                </div>
+                <div class="menu-footer">
+                    Designed by Antigravity for Mobile
+                </div>
+            </div>
+        </div>
+
+
+
+        <div id="level-select-screen" class="hidden">
+            <h2 class="glitch-text" data-text="SEVİYE SEÇ">SEVİYE SEÇ</h2>
+            <div id="level-map-container">
+                <!-- SVG Connections Background -->
+                <svg class="map-connections" width="100%" height="100%">
+                    <!-- Path 1 to 2: Curving Up -->
+                    <line x1="20%" y1="65%" x2="50%" y2="45%" class="map-path" id="path-1-2" />
+                    <!-- Path 2 to 3: Curving Down -->
+                    <line x1="50%" y1="45%" x2="80%" y2="55%" class="map-path" id="path-2-3" />
+                </svg>
+
+                <!-- Level Nodes -->
+                <div class="map-node unlocked" id="node-level-1" style="left: 20%; top: 65%;"
+                    onclick="game.startLevel(1)" ontouchstart="event.preventDefault(); game.startLevel(1)">
+                    <div class="node-icon">1</div>
+                    <div class="node-info">
+                        <div class="node-stars" id="stars-1">☆☆☆</div>
+                        <div class="node-record" id="high-score-1">DALGA 0</div>
+                    </div>
+                </div>
+
+                <div class="map-node locked" id="node-level-2" style="left: 50%; top: 45%;" onclick="game.startLevel(2)"
+                    ontouchstart="event.preventDefault(); game.startLevel(2)">
+                    <div class="node-icon">2</div>
+                    <div class="node-lock">🔒</div>
+                    <div class="node-info">
+                        <div class="node-stars" id="stars-2">☆☆☆</div>
+                        <div class="node-record" id="high-score-2">DALGA 0</div>
+                    </div>
+                </div>
+
+                <div class="map-node locked" id="node-level-3" style="left: 80%; top: 55%;" onclick="game.startLevel(3)"
+                    ontouchstart="event.preventDefault(); game.startLevel(3)">
+                    <div class="node-icon">3</div>
+                    <div class="node-lock">🔒</div>
+                    <div class="node-info">
+                        <div class="node-stars" id="stars-3">☆☆☆</div>
+                        <div class="node-record" id="high-score-3">DALGA 0</div>
+                    </div>
+                </div>
+            </div>
+            <button class="back-btn" onclick="game.showMainMenu()"
+                ontouchstart="event.preventDefault(); game.showMainMenu()">GERİ DÖN</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1>OYUN BİTTİ</h1>
+            <p id="final-score"></p>
+            <button onclick="location.reload()">TEKRAR OYNA</button>
+        </div>
+
+        <div id="victory-screen" class="hidden">
+            <div class="menu-content">
+                <div class="menu-tag">LEVEL CLEARED</div>
+                <h1 class="glitch-text">ZAFER!</h1>
+                <p id="vic-stats" class="subtitle">İstatistikler yükleniyor...</p>
+                <div class="menu-actions">
+                    <button class="main-btn pulse" onclick="game.nextLevel()">
+                        SONRAKİ BÖLÜM ▶
+                    </button>
+                    <button class="back-btn" onclick="game.showLevelSelect()" style="margin-top: 15px;">
+                        ANA MENÜ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Old UI Removed -->
+        <!-- Game Scripts -->
+        <div id="upgrade-menu" class="hidden" onmousedown="event.stopPropagation()"
+            ontouchstart="event.stopPropagation()">
+            <div class="upgrade-header">
+                <span id="upgrade-name">SNIPER</span>
+                <span id="upgrade-level" class="level-badge">LV.1</span>
+            </div>
+
+            <div class="upgrade-body">
+                <div class="stat-row">
+                    <span class="stat-label">DAMAGE</span>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar-fill" id="stat-dmg-bar" style="width: 50%"></div>
+                    </div>
+                    <div class="stat-values">
+                        <span id="upg-dmg-current">28</span>
+                        <span id="upg-dmg-next" class="stat-next">→ 35</span>
+                    </div>
+                </div>
+
+                <div class="stat-row">
+                    <span class="stat-label">RANGE</span>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar-fill" id="stat-rng-bar" style="width: 70%"></div>
+                    </div>
+                    <div class="stat-values">
+                        <span id="upg-rng-current">250</span>
+                        <span id="upg-rng-next" class="stat-next">→ 270</span>
+                    </div>
+                </div>
+
+                <div class="stat-row">
+                    <span class="stat-label">SPEED</span>
+                    <div class="stat-bar-container">
+                        <div class="stat-bar-fill" id="stat-spd-bar" style="width: 30%"></div>
+                    </div>
+                    <div class="stat-values">
+                        <span id="upg-spd-current">2.0s</span>
+                        <span id="upg-spd-next" class="stat-next">→ 1.8s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="upgrade-actions">
+                <button id="upgrade-action-btn" class="action-btn upgrade" onclick="game.upgradeSelectedTower()">
+                    <span class="btn-label">UPGRADE</span>
+                    <span class="btn-cost" id="upgrade-cost">$100</span>
+                </button>
+                <button id="sell-action-btn" class="action-btn sell" onclick="game.sellSelectedTower()">
+                    <span class="btn-label">SELL</span>
+                    <span class="btn-cost" id="sell-refund">$50</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Scripts -->
+
+        <script src="js/particle.js"></script>
+        <script src="js/audio.js"></script>
+        <script src="js/projectile.js"></script>
+        <script src="js/tower.js"></script>
+        <script src="js/enemy.js"></script>
+        <script src="js/map.js"></script>
+        <script src="js/floatingText.js"></script>
+        <script src="js/game.js"></script>
+
+        <!-- MOVED UI ELEMENTS FOR Z-INDEX FIX -->
+        <div id="settings-btn-container"
+            style="position: absolute; top: 20px; right: 20px; z-index: 99999; pointer-events: auto;">
+            <button id="settings-btn" class="hud-btn" onclick="game.toggleSettings()"
+                style="position: static; width: 60px; height: 60px; pointer-events: auto;">⚙️</button>
+        </div>
+
+        <div id="settings-modal" class="hidden" style="z-index: 99999 !important;">
+            <div class="settings-content">
+                <h2>AYARLAR</h2>
+
+                <div class="setting-group">
+                    <h3>SES AYARLARI</h3>
+                    <div class="setting-row">
+                        <label>Müzik Sesi</label>
+                        <input type="range" min="0" max="1" step="0.1" value="0.3"
+                            oninput="audio.setMusicVolume(this.value)">
+                    </div>
+                    <div class="setting-row">
+                        <label>Efekt Sesi</label>
+                        <input type="range" min="0" max="1" step="0.1" value="0.5"
+                            oninput="audio.setSFXVolume(this.value)">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>GRAFİK AYARLARI</h3>
+                    <div class="setting-row checkbox-row">
+                        <label>Parçacık Efektleri</label>
+                        <input type="checkbox" checked onchange="game.setParticles(this.checked)">
+                    </div>
+                    <div class="setting-row checkbox-row">
+                        <label>Ekran Sarsıntısı</label>
+                        <input type="checkbox" checked onchange="game.setShake(this.checked)">
+                    </div>
+                </div>
+
+                <div class="setting-actions">
+                    <button onclick="game.restartLevel()">YENİDEN BAŞLAT</button>
+                    <button onclick="game.showLevelSelect()">ANA MENÜ</button>
+                    <button class="close-btn" onclick="game.toggleSettings()">KAPAT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
