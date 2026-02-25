@@ -3,9 +3,9 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
 
-        // Set canvas resolution
-        this.canvas.width = 1280;
-        this.canvas.height = 720;
+        // Canvas çözünürlüğünü ayarla
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
 
         this.money = 200; // Requested by user
         this.lives = 20;
@@ -16,7 +16,7 @@ class Game {
         document.getElementById('money').innerText = this.money;
         document.getElementById('lives').innerText = this.lives;
 
-        this.map = new GameMap(this.ctx);
+        this.map = new GameMap(this.ctx, this.canvas.width, this.canvas.height);
         this.enemies = [];
         this.towers = [];
         this.projectiles = [];
@@ -54,19 +54,34 @@ class Game {
         this.spawnInterval = 1.0;
 
         // Bind input events
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        // Touch support for mobile dragging
-        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
-        this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
-        this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        this.canvas.addEventListener('mousedown', (e) => this.onCanvasDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.onCanvasMove(e));
+        this.canvas.addEventListener('mouseup', (e) => this.onCanvasUp(e));
+        this.canvas.addEventListener('touchstart', (e) => this.onCanvasDown(e), { passive: false });
+        this.canvas.addEventListener('touchmove', (e) => this.onCanvasMove(e), { passive: false });
+        this.canvas.addEventListener('touchend', (e) => this.onCanvasUp(e));
 
-        // Interaction State
+        // Drag state
         this.isDragging = false;
         this.dragType = null;
         this.dragX = 0;
         this.dragY = 0;
+
+        // Menu background particles
+        this.menuParticles = [];
+        for (let i = 0; i < 60; i++) {
+            this.menuParticles.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.3 - 0.1,
+                size: 1 + Math.random() * 3,
+                alpha: 0.1 + Math.random() * 0.5,
+                color: ['#00eaff', '#ff2e63', '#6c5ce7', '#a78bfa', '#4ade80'][Math.floor(Math.random() * 5)],
+                pulse: Math.random() * Math.PI * 2,
+                pulseSpeed: 1 + Math.random() * 2
+            });
+        }
 
         this.selectedTower = null; // UI Selection
 
@@ -83,8 +98,10 @@ class Game {
 
         // Handle Resize
         window.addEventListener('resize', () => {
-            // Internal logic remains 1280x720, coordinate scaling happens in getMousePos
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
             this.resizeMenuCanvas();
+            if (this.map) this.map.resize(this.canvas.width, this.canvas.height);
         });
 
         // Handle Background/Foreground transitions
@@ -209,16 +226,17 @@ class Game {
 
     initMenuEntities() {
         this.menuEntities = [];
-        for (let i = 0; i < 15; i++) {
+        // Create 40 "flying objects" (Neon Insects/Drones)
+        for (let i = 0; i < 40; i++) {
             this.menuEntities.push({
                 x: Math.random() * this.menuCanvas.width,
                 y: Math.random() * this.menuCanvas.height,
-                vx: (Math.random() - 0.5) * 50,
-                vy: (Math.random() - 0.5) * 50,
-                size: 20 + Math.random() * 40,
-                color: Math.random() > 0.5 ? '#00eaff' : '#7000ff', // Cyan or Deep Violet/Blue
-                angle: Math.random() * Math.PI * 2,
-                rotation: (Math.random() - 0.5) * 2
+                vx: (Math.random() - 0.5) * 60, // Faster movement
+                vy: (Math.random() - 0.5) * 60,
+                size: 3 + Math.random() * 5, // INCREASED SIZE: 3-8px
+                color: Math.random() > 0.5 ? '#00eaff' : '#ff2e63', // Cyan or Red/Pink
+                pulse: Math.random() * Math.PI,
+                pulseSpeed: 2 + Math.random() * 3
             });
         }
     }
@@ -230,7 +248,7 @@ class Game {
             const type = canvas.getAttribute('data-type');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const tower = new Tower(canvas.width / 2, canvas.height / 2, type);
-            tower.draw(ctx);
+            tower.draw(ctx, true); // Enable preview mode
         });
     }
 
@@ -373,6 +391,11 @@ class Game {
     showLevelSelect() {
         this.gameState = 'level_select';
 
+        // Stop Music (Safety)
+        if (audio && audio.stopBGM) {
+            audio.stopBGM();
+        }
+
         // Clear Game State
         this.enemies = [];
         this.towers = [];
@@ -411,6 +434,11 @@ class Game {
     showMainMenu() {
         this.gameState = 'menu';
 
+        // Stop Music
+        if (audio && audio.stopBGM) {
+            audio.stopBGM();
+        }
+
         // Clear Game State
         this.enemies = [];
         this.towers = [];
@@ -442,7 +470,7 @@ class Game {
         if (gameOver) gameOver.classList.add('hidden');
         if (victory) victory.classList.add('hidden');
         if (settings) settings.classList.add('hidden');
-        if (settingsBtn) settingsBtn.classList.remove('hidden');
+        if (settingsBtn) settingsBtn.classList.add('hidden'); // Hide in main menu
     }
 
     startLevel(level) {
@@ -474,7 +502,7 @@ class Game {
         // this.particlePool reference removed as it is deprecated
         this.waveActive = false;
 
-        this.map = new GameMap(this.ctx);
+        this.map = new GameMap(this.ctx, this.canvas.width, this.canvas.height);
         this.map.loadLevel(this.level);
 
         document.getElementById('money').innerText = this.money;
@@ -500,17 +528,33 @@ class Game {
         if (this.gameState === 'playing') {
             this.gameState = 'paused';
             document.getElementById('pause-btn').innerText = "▶️";
+            if (audio && audio.ctx) {
+                audio.ctx.suspend();
+            }
         } else if (this.gameState === 'paused') {
             this.gameState = 'playing';
             document.getElementById('pause-btn').innerText = "⏸️";
             this.lastTime = performance.now();
+            if (audio && audio.ctx) {
+                audio.ctx.resume();
+            }
         }
     }
 
     toggleSettings() {
         const modal = document.getElementById('settings-modal');
+        const restartBtn = document.getElementById('settings-restart-btn');
+
         if (modal.classList.contains('hidden')) {
             modal.classList.remove('hidden');
+
+            // Hide Restart button if not playing
+            if (this.gameState === 'menu' || this.gameState === 'level_select') {
+                if (restartBtn) restartBtn.classList.add('hidden');
+            } else {
+                if (restartBtn) restartBtn.classList.remove('hidden');
+            }
+
             // Auto pause if playing
             if (this.gameState === 'playing') {
                 this.togglePause();
@@ -523,6 +567,15 @@ class Game {
             // Resume if it was playing when opened
             if (this.wasPlaying && this.gameState === 'paused') {
                 this.togglePause();
+            } else {
+                // If it wasn't playing, but we might have suspended it manually or something? 
+                // No, togglePause handles resume. 
+                // But just in case we are in menu and want menu music back? 
+                // Menu music should run if not paused. 
+                // If we are in menu, togglePause isn't called.
+                if (audio && audio.ctx && audio.ctx.state === 'suspended' && this.gameState !== 'paused') {
+                    audio.ctx.resume();
+                }
             }
         }
     }
@@ -606,17 +659,161 @@ class Game {
         this.spawnInterval = Math.max(0.2, 1.2 - (this.wave * 0.05));
     }
 
-    // --- Interaction Handling ---
+    // ========= DRAG-AND-DROP KULE YERLEŞTİRME =========
 
-    startDrag(type) {
+    // Ekran koordinatını canvas koordinatına çevir
+    eventToCanvas(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        let cx, cy;
+        if (e.touches && e.touches.length > 0) {
+            cx = e.touches[0].clientX;
+            cy = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            cx = e.changedTouches[0].clientX;
+            cy = e.changedTouches[0].clientY;
+        } else {
+            cx = e.clientX;
+            cy = e.clientY;
+        }
+        return {
+            x: (cx - rect.left) * (this.canvas.width / rect.width),
+            y: (cy - rect.top) * (this.canvas.height / rect.height)
+        };
+    }
+
+    // Build menüden sürükleme başlat
+    startDrag(type, event) {
+        if (event) event.preventDefault();
+        if (this.gameState !== 'playing') return;
+
         if (this.money < this.getTowerCost(type)) {
-            console.log("Not enough money!");
+            this.addFloatingText(this.canvas.width / 2, this.canvas.height / 2, 'PARA YETERSİZ', '#ff0000');
             return;
         }
+
         this.isDragging = true;
         this.dragType = type;
-        this.dragX = -100; // Start off screen
-        this.dragY = -100;
+
+        // İlk pozisyon
+        const pos = this.eventToCanvas(event);
+        this.dragX = pos.x;
+        this.dragY = pos.y;
+
+        // Document seviyesinde listener'lar (sürükleme canvas dışında da çalışsın)
+        const onMove = (e) => {
+            e.preventDefault();
+            const p = this.eventToCanvas(e);
+            this.dragX = p.x;
+            this.dragY = p.y;
+        };
+
+        const onDrop = (e) => {
+            e.preventDefault();
+
+            // Son pozisyonu al (touchend'de changedTouches kullanılır)
+            const p = this.eventToCanvas(e);
+            this.dragX = p.x;
+            this.dragY = p.y;
+
+            // Listener'ları temizle
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('mouseup', onDrop);
+            document.removeEventListener('touchend', onDrop);
+
+            if (!this.isDragging) return;
+
+            // Kuleyi yerleştirmeye çalış
+            this.tryPlaceTowerAt(this.dragX, this.dragY);
+            this.isDragging = false;
+            this.dragType = null;
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('mouseup', onDrop);
+        document.addEventListener('touchend', onDrop);
+    }
+
+    // Canvas koordinatlarından grid'e çevirip yerleştir
+    tryPlaceTowerAt(canvasX, canvasY) {
+        if (!this.map || !this.dragType) return;
+
+        const col = Math.floor(canvasX / this.map.tileSize);
+        const row = Math.floor(canvasY / this.map.tileSize);
+
+        if (col < 0 || col >= this.map.cols || row < 0 || row >= this.map.rows) return;
+
+        if (this.map.isOnPath(col, row)) {
+            this.addFloatingText(canvasX, canvasY, 'YOLA KONAMIYOR', '#ff0000');
+            return;
+        }
+
+        const occupied = this.towers.some(t => {
+            const tCol = Math.floor(t.x / this.map.tileSize);
+            const tRow = Math.floor(t.y / this.map.tileSize);
+            return tCol === col && tRow === row;
+        });
+        if (occupied) return;
+
+        this.placeTower(col, row, this.dragType);
+    }
+
+    // Canvas event handler'ları (mevcut kule seçme/satma için)
+    onCanvasDown(e) {
+        if (this.gameState !== 'playing') return;
+        if (e.target !== this.canvas) return;
+        if (this.isDragging) return; // Drag sırasında canvas click'i yoksay
+        e.preventDefault();
+
+        const pos = this.eventToCanvas(e);
+
+        const clickedTower = this.towers.find(t => {
+            const dx = t.x - pos.x;
+            const dy = t.y - pos.y;
+            return Math.sqrt(dx * dx + dy * dy) < 30;
+        });
+
+        if (clickedTower) {
+            this.pressingTower = clickedTower;
+            this.sellTimer = 0;
+        } else {
+            this.deselectTower();
+        }
+    }
+
+    onCanvasMove(e) {
+        // Mouse pozisyonu takibi (kullanılmıyor şu an)
+    }
+
+    onCanvasUp(e) {
+        e.preventDefault();
+        if (this.pressingTower) {
+            const wasShortClick = this.sellTimer < this.sellDuration;
+            const targetTower = this.pressingTower;
+            this.pressingTower = null;
+            this.sellTimer = 0;
+            if (wasShortClick) {
+                try { this.selectTower(targetTower); } catch (err) { console.error('Select error:', err); }
+            }
+        }
+    }
+
+    placeTower(col, row, type) {
+        const cost = this.getTowerCost(type);
+        if (this.money >= cost) {
+            const centerX = col * this.map.tileSize + this.map.tileSize / 2;
+            const centerY = row * this.map.tileSize + this.map.tileSize / 2;
+
+            this.towers.push(new Tower(centerX, centerY, type));
+            this.money -= cost;
+            this.updateMoneyDisplay();
+
+            for (let i = 0; i < 5; i++) {
+                this.spawnParticle(centerX, centerY, '#fff', 1, 0.5);
+            }
+            if (audio && audio.playBuild) audio.playBuild();
+        }
     }
 
     getTowerCost(type) {
@@ -626,123 +823,6 @@ class Game {
         if (type === 'tesla') return 200;
         if (type === 'plasma') return 300;
         return 0;
-    }
-
-    getMousePos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        return {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        };
-    }
-
-    getTouchPos(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const touch = e.touches[0];
-        return {
-            x: (touch.clientX - rect.left) * scaleX,
-            y: (touch.clientY - rect.top) * scaleY
-        };
-    }
-
-    handleMouseDown(e) {
-        if (this.gameOver || this.gameState !== 'playing') return;
-        // Ignore clicks on UI elements (buttons, menus)
-        if (e.target !== this.canvas) return;
-
-        const pos = this.getMousePos(e);
-        this.checkPressStart(pos.x, pos.y);
-    }
-
-    handleMouseMove(e) {
-        const pos = this.getMousePos(e);
-        this.updateDragPos(pos.x, pos.y);
-    }
-
-    handleMouseUp(e) {
-        this.handleInteractionEnd();
-    }
-
-    // Touch Handlers
-    handleTouchStart(e) {
-        if (this.gameOver || this.gameState !== 'playing') return;
-        // Ignore touches on UI
-        if (e.target !== this.canvas) return;
-
-        e.preventDefault();
-        const pos = this.getTouchPos(e);
-        this.checkPressStart(pos.x, pos.y);
-    }
-
-    handleTouchMove(e) {
-        // e.preventDefault(); // Don't prevent default globally, might block UI scrolling if needed
-        if (e.target !== this.canvas) return;
-
-        e.preventDefault();
-        const pos = this.getTouchPos(e);
-        this.updateDragPos(pos.x, pos.y);
-    }
-
-    handleTouchEnd(e) {
-        e.preventDefault();
-        this.handleInteractionEnd();
-    }
-
-    // Common Logic
-    checkPressStart(x, y) {
-        // Check if pressing on an existing tower
-        const clickedTower = this.towers.find(t => {
-            const dx = t.x - x;
-            const dy = t.y - y;
-            return Math.sqrt(dx * dx + dy * dy) < 30;
-        });
-
-        if (clickedTower) {
-            this.pressingTower = clickedTower;
-            this.sellTimer = 0;
-        } else if (!this.isDragging) {
-            // Clicked on empty space
-            this.deselectTower();
-        }
-    }
-
-    updateDragPos(x, y) {
-        if (this.isDragging) {
-            this.dragX = x;
-            this.dragY = y;
-        }
-    }
-
-    handleInteractionEnd() {
-        if (this.isDragging) {
-            // Drop Tower
-            // Use dragX/dragY for placement
-            this.placeTower(this.dragX, this.dragY, this.dragType);
-            this.isDragging = false;
-            this.dragType = null;
-        }
-
-        if (this.pressingTower) {
-            // Check if it was a short click (select) or long press (handled in update)
-            const wasShortClick = this.sellTimer < this.sellDuration;
-            const targetTower = this.pressingTower; // Capture reference
-
-            // CLEAR STATE FIRST to prevent loops if selectTower crashes
-            this.pressingTower = null;
-            this.sellTimer = 0;
-
-            if (wasShortClick) {
-                try {
-                    this.selectTower(targetTower);
-                } catch (e) {
-                    console.error("Selection Error:", e);
-                }
-            }
-        }
     }
 
     selectTower(tower) {
@@ -764,9 +844,11 @@ class Game {
         if (!this.selectedTower) return;
         const t = this.selectedTower;
 
-        // Basic Info
+        // Basic Info + Icon
         document.getElementById('upgrade-name').innerText = t.type.toUpperCase();
         document.getElementById('upgrade-level').innerText = 'LV.' + t.level;
+        const icons = { standard: '🔫', sniper: '🎯', rapid: '⚡', tesla: '⚡', plasma: '💫' };
+        document.getElementById('upg-icon').innerText = icons[t.type] || '⚙';
 
         // --- CALCULATE STATS ---
         const isMax = t.level >= t.maxLevel;
@@ -845,14 +927,14 @@ class Game {
 
         if (isMax) {
             upgBtn.disabled = true;
-            upgBtn.innerHTML = '<span class="btn-label">MAX LEVEL</span>';
+            upgBtn.innerHTML = '<span class="btn-label">⭐ MAX SEVİYE</span>';
         } else {
             upgBtn.disabled = false;
             const cost = t.getUpgradeCost();
             if (costSpan) costSpan.innerText = '$' + cost;
 
             // Re-render button content with ID preserved
-            upgBtn.innerHTML = `<span class="btn-label">UPGRADE</span> <span class="btn-cost" id="upgrade-cost">$${cost}</span>`;
+            upgBtn.innerHTML = `<span class="btn-label">⬆ YÜKSELT</span> <span class="btn-cost" id="upgrade-cost">$${cost}</span>`;
 
             // Highlight if affordable
             if (this.money >= cost) {
@@ -937,58 +1019,6 @@ class Game {
 
     updateMoneyDisplay() {
         document.getElementById('money').innerText = this.money;
-    }
-
-    // --- OLD HANDLERS REMOVED ---
-
-    placeTower(x, y, type) {
-        const tileSize = 48; // Updated tile size
-        const gridX = Math.floor(x / tileSize);
-        const gridY = Math.floor(y / tileSize);
-
-        // Check bounds
-        if (gridX < 0 || gridX >= this.map.cols || gridY < 0 || gridY >= this.map.rows) return;
-
-        // Cost check again (safety)
-        const cost = this.getTowerCost(type);
-        if (this.money < cost) return;
-
-        // Check if on path
-        if (this.map.isOnPath(gridX, gridY)) {
-            console.log("Cannot build on path!");
-            return;
-        }
-
-        // Check if tower already exists
-        const existing = this.towers.find(t => {
-            const tx = Math.floor(t.x / tileSize);
-            const ty = Math.floor(t.y / tileSize);
-            return tx === gridX && ty === gridY;
-        });
-
-        if (existing) {
-            console.log("Spot taken!");
-            return;
-        }
-
-        const pixelX = gridX * tileSize + tileSize / 2;
-        const pixelY = gridY * tileSize + tileSize / 2;
-
-        this.towers.push(new Tower(pixelX, pixelY, type));
-        this.money -= cost;
-        document.getElementById('money').innerText = this.money;
-
-        // Build effect
-        // game.effects.trigger('explosion', pixelX, pixelY, '#fff'); // Single call
-        for (let i = 0; i < 5; i++) {
-            this.spawnParticle(pixelX, pixelY, '#fff', 1, 0.5);
-        }
-
-        try {
-            audio.playBuild();
-        } catch (e) {
-            console.warn("Audio playBuild failed", e);
-        }
     }
 
     update(deltaTime) {
@@ -1112,17 +1142,77 @@ class Game {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // ALWAYS draw menu background entities (particles, etc.)
-        // But first, if we have a map, draw its static background (Grid) for a better look
-        if (this.map && this.map.cacheCanvas) {
-            this.ctx.drawImage(this.map.cacheCanvas, 0, 0);
+        // 1. Background Handling
+        if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'gameover') {
+            // GAME BACKGROUND: Draw Map (Grid/Squares)
+            if (this.map && this.map.cacheCanvas && this.map.cacheCanvas.width > 0 && this.map.cacheCanvas.height > 0) {
+                this.ctx.drawImage(this.map.cacheCanvas, 0, 0);
+            }
         } else {
-            // Fallback if no map loaded yet (e.g. very start)
-            this.ctx.fillStyle = '#0d0d1a';
+            // MENU BACKGROUND: Animated Dark Background
+            this.ctx.fillStyle = '#050510';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        }
 
-        this.drawMenu(this.ctx);
+            // Draw animated particles
+            const w = this.canvas.width;
+            const h = this.canvas.height;
+            const now = performance.now() * 0.001;
+
+            for (const p of this.menuParticles) {
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+                p.pulse += p.pulseSpeed * 0.016;
+
+                // Wrap around
+                if (p.x < -10) p.x = w + 10;
+                if (p.x > w + 10) p.x = -10;
+                if (p.y < -10) p.y = h + 10;
+                if (p.y > h + 10) p.y = -10;
+
+                const pulseAlpha = p.alpha * (0.5 + 0.5 * Math.sin(p.pulse));
+
+                // Glow
+                this.ctx.save();
+                this.ctx.globalAlpha = pulseAlpha * 0.3;
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = p.color;
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
+
+                // Core
+                this.ctx.globalAlpha = pulseAlpha;
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            // Connection lines between nearby particles
+            this.ctx.lineWidth = 0.5;
+            for (let i = 0; i < this.menuParticles.length; i++) {
+                for (let j = i + 1; j < this.menuParticles.length; j++) {
+                    const a = this.menuParticles[i];
+                    const b = this.menuParticles[j];
+                    const dx = a.x - b.x;
+                    const dy = a.y - b.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 100) {
+                        const lineAlpha = (1 - dist / 100) * 0.15;
+                        this.ctx.globalAlpha = lineAlpha;
+                        this.ctx.strokeStyle = a.color;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(a.x, a.y);
+                        this.ctx.lineTo(b.x, b.y);
+                        this.ctx.stroke();
+                    }
+                }
+            }
+            this.ctx.globalAlpha = 1;
+        }
 
         // ONLY draw game elements if playing/paused/gameover
         if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'gameover') {
@@ -1158,10 +1248,37 @@ class Game {
             // Draw Floating Texts
             this.floatingTexts.forEach(t => t.draw(this.ctx));
 
-            // Draw Ghost Tower (Placement Preview)
+            // Draw Ghost Tower (Sürükleme önizlemesi)
             if (this.isDragging && this.dragType) {
+                const ts = this.map.tileSize;
+                const gc = Math.floor(this.dragX / ts);
+                const gr = Math.floor(this.dragY / ts);
+                const gpx = gc * ts + ts / 2;
+                const gpy = gr * ts + ts / 2;
 
-                this.drawGhostTower(this.dragX, this.dragY, this.dragType);
+                let valid = gc >= 0 && gc < this.map.cols && gr >= 0 && gr < this.map.rows;
+                if (valid && this.map.isOnPath(gc, gr)) valid = false;
+                if (valid && this.towers.some(t => Math.floor(t.x / ts) === gc && Math.floor(t.y / ts) === gr)) valid = false;
+                if (valid && this.money < this.getTowerCost(this.dragType)) valid = false;
+
+                const gcolor = valid ? '#4ecca3' : '#ff2e63';
+                const grange = this.dragType === 'sniper' ? 250 : this.dragType === 'plasma' ? 200 : 120;
+
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.5;
+                this.ctx.beginPath();
+                this.ctx.arc(gpx, gpy, grange, 0, Math.PI * 2);
+                this.ctx.fillStyle = valid ? 'rgba(78,204,163,0.15)' : 'rgba(255,46,99,0.15)';
+                this.ctx.fill();
+                this.ctx.strokeStyle = gcolor;
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+
+                this.ctx.fillStyle = gcolor;
+                this.ctx.beginPath();
+                this.ctx.arc(gpx, gpy, 12, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
             } else if (this.selectedTower) {
                 // Draw selection ring
                 this.ctx.strokeStyle = '#fff';
@@ -1184,33 +1301,7 @@ class Game {
         }
     }
 
-    drawGhostTower(x, y, type) {
-        this.ctx.save();
-        this.ctx.globalAlpha = 0.5;
-        // Snap to grid for preview
-        const tileSize = 48;
-        const gridX = Math.floor(x / tileSize);
-        const gridY = Math.floor(y / tileSize);
-        const px = gridX * tileSize + tileSize / 2;
-        const py = gridY * tileSize + tileSize / 2;
 
-        // Hacky manual range check or create dummy tower
-        const dummy = new Tower(px, py, type);
-
-        // Range
-        this.ctx.beginPath();
-        this.ctx.arc(px, py, dummy.range, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        this.ctx.fill();
-        this.ctx.strokeStyle = '#fff';
-        this.ctx.lineWidth = 1;
-        this.ctx.stroke();
-
-        // Tower visual
-        dummy.draw(this.ctx);
-
-        this.ctx.restore();
-    }
 
     drawSellProgress() {
         if (this.pressingTower && this.sellTimer > 0.2) {
@@ -1245,53 +1336,70 @@ class Game {
 
     updateMenu(deltaTime) {
         this.menuEntities.forEach(e => {
+            // Add slight "wander" to velocity to mimic insects
+            e.vx += (Math.random() - 0.5) * 100 * deltaTime;
+            e.vy += (Math.random() - 0.5) * 100 * deltaTime;
+
+            // Cap velocity
+            const maxSpeed = 80;
+            const speed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
+            if (speed > maxSpeed) {
+                e.vx = (e.vx / speed) * maxSpeed;
+                e.vy = (e.vy / speed) * maxSpeed;
+            }
+
             e.x += e.vx * deltaTime;
             e.y += e.vy * deltaTime;
-            e.angle += e.rotation * deltaTime;
+            e.pulse += e.pulseSpeed * deltaTime;
 
-            // Bounce
-            if (e.x < 0 || e.x > this.menuCanvas.width) e.vx *= -1;
-            if (e.y < 0 || e.y > this.menuCanvas.height) e.vy *= -1;
+            // Wrap around screen
+            if (e.x < -50) e.x = this.menuCanvas.width + 50;
+            if (e.x > this.menuCanvas.width + 50) e.x = -50;
+            if (e.y < -50) e.y = this.menuCanvas.height + 50;
+            if (e.y > this.menuCanvas.height + 50) e.y = -50;
         });
     }
 
     drawMenu() {
-        // console.log("Drawing Menu. Entities:", this.menuEntities.length, "Canvas:", this.menuCanvas.width, this.menuCanvas.height);
         this.menuCtx.clearRect(0, 0, this.menuCanvas.width, this.menuCanvas.height);
-
-        // DEBUG CIRCLE
-        this.menuCtx.fillStyle = 'red';
-        this.menuCtx.beginPath();
-        this.menuCtx.arc(100, 100, 50, 0, Math.PI * 2);
-        this.menuCtx.fill();
 
         // Adjust opacity based on state
         const isPlaying = this.gameState === 'playing' || this.gameState === 'paused';
-        this.menuCtx.globalAlpha = isPlaying ? 0.6 : 1.0; // Increased prominence during play
+        this.menuCtx.globalAlpha = isPlaying ? 0.4 : 1.0;
 
         this.menuEntities.forEach(e => {
             this.menuCtx.save();
             this.menuCtx.translate(e.x, e.y);
-            this.menuCtx.rotate(e.angle);
 
-            this.menuCtx.strokeStyle = e.color;
-            this.menuCtx.lineWidth = 2;
-            this.menuCtx.shadowBlur = isPlaying ? 5 : 15;
+            // Pulse opacity - INCREASED BASE OPACITY
+            const alpha = 0.6 + Math.sin(e.pulse) * 0.4; // Min 0.2 -> 0.6
+            this.menuCtx.globalAlpha = (isPlaying ? 0.3 : 1.0) * alpha;
+
+            this.menuCtx.fillStyle = e.color;
+            this.menuCtx.shadowBlur = 15; // INCREASED GLOW
             this.menuCtx.shadowColor = e.color;
 
-            // Draw a diamond shape
+            // Draw "Insect" / "Drone" body
             this.menuCtx.beginPath();
-            this.menuCtx.moveTo(0, -e.size / 2);
-            this.menuCtx.lineTo(e.size / 2, 0);
-            this.menuCtx.lineTo(0, e.size / 2);
-            this.menuCtx.lineTo(-e.size / 2, 0);
-            this.menuCtx.closePath();
-            this.menuCtx.stroke();
-
-            // Pulse inner light
-            this.menuCtx.globalAlpha = isPlaying ? 0.1 : 0.3;
-            this.menuCtx.fillStyle = e.color;
+            this.menuCtx.arc(0, 0, e.size, 0, Math.PI * 2);
             this.menuCtx.fill();
+
+            // CORE: Draw white center for visibility
+            this.menuCtx.fillStyle = '#fff';
+            this.menuCtx.shadowBlur = 0;
+            this.menuCtx.beginPath();
+            this.menuCtx.arc(0, 0, e.size * 0.4, 0, Math.PI * 2);
+            this.menuCtx.fill();
+
+
+            // Draw "Wings" or "Glow Trail" (simple line behind movement)
+            this.menuCtx.globalAlpha *= 0.5;
+            this.menuCtx.beginPath();
+            this.menuCtx.moveTo(0, 0);
+            this.menuCtx.lineTo(-e.vx * 0.4, -e.vy * 0.4); // LONGER TRAIL
+            this.menuCtx.strokeStyle = e.color;
+            this.menuCtx.lineWidth = 2; // THICKER TRAIL
+            this.menuCtx.stroke();
 
             this.menuCtx.restore();
         });

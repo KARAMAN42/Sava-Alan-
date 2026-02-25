@@ -44,28 +44,33 @@
             </div>
 
             <div id="build-menu">
-                <div class="tower-card" onmousedown="game.startDrag('standard')">
-                    <canvas class="tower-preview-canvas" data-type="standard" width="36" height="36"></canvas>
+                <div class="tower-card" onmousedown="game.startDrag('standard', event)"
+                    ontouchstart="game.startDrag('standard', event)">
+                    <canvas class="tower-preview-canvas" data-type="standard" width="48" height="48"></canvas>
                     <span class="tower-cost">$50</span>
                     <span class="tower-name">Turret</span>
                 </div>
-                <div class="tower-card" onmousedown="game.startDrag('sniper')">
-                    <canvas class="tower-preview-canvas" data-type="sniper" width="36" height="36"></canvas>
+                <div class="tower-card" onmousedown="game.startDrag('sniper', event)"
+                    ontouchstart="game.startDrag('sniper', event)">
+                    <canvas class="tower-preview-canvas" data-type="sniper" width="48" height="48"></canvas>
                     <span class="tower-cost">$100</span>
                     <span class="tower-name">Sniper</span>
                 </div>
-                <div class="tower-card" onmousedown="game.startDrag('rapid')">
-                    <canvas class="tower-preview-canvas" data-type="rapid" width="36" height="36"></canvas>
+                <div class="tower-card" onmousedown="game.startDrag('rapid', event)"
+                    ontouchstart="game.startDrag('rapid', event)">
+                    <canvas class="tower-preview-canvas" data-type="rapid" width="48" height="48"></canvas>
                     <span class="tower-cost">$150</span>
                     <span class="tower-name">Shredder</span>
                 </div>
-                <div class="tower-card" onmousedown="game.startDrag('tesla')">
-                    <canvas class="tower-preview-canvas" data-type="tesla" width="36" height="36"></canvas>
+                <div class="tower-card" onmousedown="game.startDrag('tesla', event)"
+                    ontouchstart="game.startDrag('tesla', event)">
+                    <canvas class="tower-preview-canvas" data-type="tesla" width="48" height="48"></canvas>
                     <span class="tower-cost">$200</span>
                     <span class="tower-name">Tesla</span>
                 </div>
-                <div class="tower-card" onmousedown="game.startDrag('plasma')">
-                    <canvas class="tower-preview-canvas" data-type="plasma" width="36" height="36"></canvas>
+                <div class="tower-card" onmousedown="game.startDrag('plasma', event)"
+                    ontouchstart="game.startDrag('plasma', event)">
+                    <canvas class="tower-preview-canvas" data-type="plasma" width="48" height="48"></canvas>
                     <span class="tower-cost">$300</span>
                     <span class="tower-name">Plasma</span>
                 </div>
@@ -110,7 +115,7 @@
 
                 <!-- Level Nodes -->
                 <div class="map-node unlocked" id="node-level-1" style="left: 20%; top: 65%;"
-                    onclick="game.startLevel(1)" ontouchstart="event.preventDefault(); game.startLevel(1)">
+                    onclick="game.startLevel(1)">
                     <div class="node-icon">1</div>
                     <div class="node-info">
                         <div class="node-stars" id="stars-1">☆☆☆</div>
@@ -138,8 +143,6 @@
                     </div>
                 </div>
             </div>
-            <button class="back-btn" onclick="game.showMainMenu()"
-                ontouchstart="event.preventDefault(); game.showMainMenu()">GERİ DÖN</button>
         </div>
 
         <div id="game-over-screen" class="hidden">
@@ -157,7 +160,7 @@
                     <button class="main-btn pulse" onclick="game.nextLevel()">
                         SONRAKİ BÖLÜM ▶
                     </button>
-                    <button class="back-btn" onclick="game.showLevelSelect()" style="margin-top: 15px;">
+                    <button class="back-btn" onclick="game.showMainMenu()" style="margin-top: 15px;">
                         ANA MENÜ
                     </button>
                 </div>
@@ -168,53 +171,56 @@
         <!-- Game Scripts -->
         <div id="upgrade-menu" class="hidden" onmousedown="event.stopPropagation()"
             ontouchstart="event.stopPropagation()">
-            <div class="upgrade-header">
-                <span id="upgrade-name">SNIPER</span>
-                <span id="upgrade-level" class="level-badge">LV.1</span>
-            </div>
-
-            <div class="upgrade-body">
-                <div class="stat-row">
-                    <span class="stat-label">DAMAGE</span>
-                    <div class="stat-bar-container">
-                        <div class="stat-bar-fill" id="stat-dmg-bar" style="width: 50%"></div>
-                    </div>
-                    <div class="stat-values">
-                        <span id="upg-dmg-current">28</span>
-                        <span id="upg-dmg-next" class="stat-next">→ 35</span>
-                    </div>
-                </div>
-
-                <div class="stat-row">
-                    <span class="stat-label">RANGE</span>
-                    <div class="stat-bar-container">
-                        <div class="stat-bar-fill" id="stat-rng-bar" style="width: 70%"></div>
-                    </div>
-                    <div class="stat-values">
-                        <span id="upg-rng-current">250</span>
-                        <span id="upg-rng-next" class="stat-next">→ 270</span>
-                    </div>
-                </div>
-
-                <div class="stat-row">
-                    <span class="stat-label">SPEED</span>
-                    <div class="stat-bar-container">
-                        <div class="stat-bar-fill" id="stat-spd-bar" style="width: 30%"></div>
-                    </div>
-                    <div class="stat-values">
-                        <span id="upg-spd-current">2.0s</span>
-                        <span id="upg-spd-next" class="stat-next">→ 1.8s</span>
-                    </div>
+            <button class="upg-close" onclick="game.deselectTower()">✕</button>
+            <div class="upg-top">
+                <div class="upg-icon" id="upg-icon">⚙</div>
+                <div class="upg-title-area">
+                    <span id="upgrade-name">SNIPER</span>
+                    <span id="upgrade-level" class="upg-lvl">LV.1</span>
                 </div>
             </div>
-
-            <div class="upgrade-actions">
-                <button id="upgrade-action-btn" class="action-btn upgrade" onclick="game.upgradeSelectedTower()">
-                    <span class="btn-label">UPGRADE</span>
+            <div class="upg-stats">
+                <div class="upg-stat">
+                    <div class="upg-stat-head">
+                        <span class="upg-stat-icon">💥</span>
+                        <span class="upg-stat-label">HASAR</span>
+                        <span id="upg-dmg-next" class="upg-stat-next"></span>
+                    </div>
+                    <div class="upg-bar">
+                        <div class="upg-bar-fill upg-bar-dmg" id="stat-dmg-bar"></div>
+                    </div>
+                    <span class="upg-stat-val" id="upg-dmg-current">28</span>
+                </div>
+                <div class="upg-stat">
+                    <div class="upg-stat-head">
+                        <span class="upg-stat-icon">🎯</span>
+                        <span class="upg-stat-label">MENZİL</span>
+                        <span id="upg-rng-next" class="upg-stat-next"></span>
+                    </div>
+                    <div class="upg-bar">
+                        <div class="upg-bar-fill upg-bar-rng" id="stat-rng-bar"></div>
+                    </div>
+                    <span class="upg-stat-val" id="upg-rng-current">250</span>
+                </div>
+                <div class="upg-stat">
+                    <div class="upg-stat-head">
+                        <span class="upg-stat-icon">⚡</span>
+                        <span class="upg-stat-label">HIZ</span>
+                        <span id="upg-spd-next" class="upg-stat-next"></span>
+                    </div>
+                    <div class="upg-bar">
+                        <div class="upg-bar-fill upg-bar-spd" id="stat-spd-bar"></div>
+                    </div>
+                    <span class="upg-stat-val" id="upg-spd-current">2.0s</span>
+                </div>
+            </div>
+            <div class="upg-btns">
+                <button id="upgrade-action-btn" class="upg-btn-upgrade" onclick="game.upgradeSelectedTower()">
+                    <span class="btn-label">⬆ YÜKSELT</span>
                     <span class="btn-cost" id="upgrade-cost">$100</span>
                 </button>
-                <button id="sell-action-btn" class="action-btn sell" onclick="game.sellSelectedTower()">
-                    <span class="btn-label">SELL</span>
+                <button id="sell-action-btn" class="upg-btn-sell" onclick="game.sellSelectedTower()">
+                    <span class="btn-label">🗑 SAT</span>
                     <span class="btn-cost" id="sell-refund">$50</span>
                 </button>
             </div>
@@ -233,46 +239,73 @@
 
         <!-- MOVED UI ELEMENTS FOR Z-INDEX FIX -->
         <div id="settings-btn-container"
-            style="position: absolute; top: 20px; right: 20px; z-index: 99999; pointer-events: auto;">
+            style="position: absolute; top: 10px; right: 10px; z-index: 99999; pointer-events: auto;">
             <button id="settings-btn" class="hud-btn" onclick="game.toggleSettings()"
-                style="position: static; width: 60px; height: 60px; pointer-events: auto;">⚙️</button>
+                style="position: static; pointer-events: auto;">⚙️</button>
         </div>
 
         <div id="settings-modal" class="hidden" style="z-index: 99999 !important;">
             <div class="settings-content">
-                <h2>AYARLAR</h2>
-
-                <div class="setting-group">
-                    <h3>SES AYARLARI</h3>
-                    <div class="setting-row">
-                        <label>Müzik Sesi</label>
-                        <input type="range" min="0" max="1" step="0.1" value="0.3"
-                            oninput="audio.setMusicVolume(this.value)">
-                    </div>
-                    <div class="setting-row">
-                        <label>Efekt Sesi</label>
-                        <input type="range" min="0" max="1" step="0.1" value="0.5"
-                            oninput="audio.setSFXVolume(this.value)">
-                    </div>
+                <div class="settings-scanlines"></div>
+                <div class="settings-header">
+                    <div class="settings-corner tl"></div>
+                    <div class="settings-corner tr"></div>
+                    <span class="settings-title">⚙ AYARLAR ⚙</span>
                 </div>
 
-                <div class="setting-group">
-                    <h3>GRAFİK AYARLARI</h3>
-                    <div class="setting-row checkbox-row">
-                        <label>Parçacık Efektleri</label>
-                        <input type="checkbox" checked onchange="game.setParticles(this.checked)">
+                <div class="settings-body">
+                    <div class="setting-group">
+                        <div class="setting-group-title">🔊 SES</div>
+                        <div class="setting-row">
+                            <label>🎵 MÜZİK</label>
+                            <div class="retro-slider-wrap">
+                                <input type="range" min="0" max="1" step="0.1" value="0.3"
+                                    oninput="audio.setMusicVolume(this.value)">
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>💥 EFEKT</label>
+                            <div class="retro-slider-wrap">
+                                <input type="range" min="0" max="1" step="0.1" value="0.5"
+                                    oninput="audio.setSFXVolume(this.value)">
+                            </div>
+                        </div>
                     </div>
-                    <div class="setting-row checkbox-row">
-                        <label>Ekran Sarsıntısı</label>
-                        <input type="checkbox" checked onchange="game.setShake(this.checked)">
+
+                    <div class="settings-divider">▶◀</div>
+
+                    <div class="setting-group">
+                        <div class="setting-group-title">🖥 GRAFİK</div>
+                        <div class="setting-row checkbox-row">
+                            <label>✨ PARÇACIKLAR</label>
+                            <label class="retro-toggle">
+                                <input type="checkbox" checked onchange="game.setParticles(this.checked)">
+                                <span class="retro-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row checkbox-row">
+                            <label>📳 SARSINTI</label>
+                            <label class="retro-toggle">
+                                <input type="checkbox" checked onchange="game.setShake(this.checked)">
+                                <span class="retro-toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
                 <div class="setting-actions">
-                    <button onclick="game.restartLevel()">YENİDEN BAŞLAT</button>
-                    <button onclick="game.showLevelSelect()">ANA MENÜ</button>
-                    <button class="close-btn" onclick="game.toggleSettings()">KAPAT</button>
+                    <button class="retro-btn retro-btn-green" id="settings-restart-btn" onclick="game.restartLevel()">
+                        <span class="retro-btn-icon">↺</span> YENİDEN
+                    </button>
+                    <button class="retro-btn retro-btn-yellow" onclick="game.showMainMenu()">
+                        <span class="retro-btn-icon">⌂</span> ANA MENÜ
+                    </button>
+                    <button class="retro-btn retro-btn-red" onclick="game.toggleSettings()">
+                        <span class="retro-btn-icon">✕</span> KAPAT
+                    </button>
                 </div>
+
+                <div class="settings-footer">INSERT COIN TO CONTINUE</div>
             </div>
         </div>
     </div>

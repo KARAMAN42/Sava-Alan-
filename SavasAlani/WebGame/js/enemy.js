@@ -86,7 +86,7 @@ class Enemy {
     }
 
     getGridPos(index) {
-        const tileSize = 48; // Updated tile size
+        const tileSize = game.map ? game.map.tileSize : 24; // Use dynamic size
         if (index >= this.path.length) return null;
         return {
             x: this.path[index].x * tileSize + tileSize / 2,
@@ -117,14 +117,20 @@ class Enemy {
         const currentSpeed = this.speed * this.speedMult; // Apply slow
 
         // Shrink visual if near end of path (entering hole)
-        if (this.pathIndex === this.path.length - 1 && dist < 30) {
-            this.scale = Math.max(0, dist / 30);
+        if (this.pathIndex === this.path.length - 1) {
+            // Start shrinking sooner: when dist < 40
+            if (dist < 40) {
+                // Map distance 40->0 to scale 1.0->0.0
+                this.scale = Math.max(0, dist / 40);
+            }
         }
 
         if (dist <= 5) {
             // Reached waypoint
             this.pathIndex++;
             if (this.pathIndex >= this.path.length) {
+                // Ensure scale is 0 just in case
+                this.scale = 0;
                 this.reachEnd();
                 return;
             }
@@ -149,7 +155,8 @@ class Enemy {
 
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.scale(this.scale, this.scale);
+        const globalScale = game.map ? game.map.tileSize / 48 : 1;
+        ctx.scale(this.scale * globalScale, this.scale * globalScale);
 
         // Face detection
         const dx = this.targetX - this.x;
